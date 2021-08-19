@@ -1,0 +1,19 @@
+name: Get preprocess data
+description: Gets images and text files from the input pdf file.
+
+
+inputs:
+- {name: Input 1, type: Directory, description: 'Input pdf'}
+outputs:
+- {name: Output 1, type: Directory, description: 'images'}
+- {name: Output 2, type: Directory, description: 'txt'}
+
+implementation:
+  container:
+    image: docker.io/drobnov1994/example:latest
+    command: [python, /preprocess/preprocess_run.py]
+    args: [
+        --input-path, {inputValue: Input 1},
+        --output-images-path, {outputPath: Output 1},
+        --output-text-path, {outputPath: Output 2}
+            ]

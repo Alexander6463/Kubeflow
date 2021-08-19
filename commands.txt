@@ -1,0 +1,3 @@
+kubectl port-forward -n kubeflow svc/ml-pipeline-ui 8080:80
+kubectl get svc -n kubeflow
+kubectl port-forward svc/minio-service -n kubeflow 9000:9000
