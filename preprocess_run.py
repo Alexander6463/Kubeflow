@@ -3,14 +3,16 @@ import logging
 import os
 import sys
 from pathlib import Path
+from minio import Minio
 
 from pdf_preprocesser import preprocess
-import urllib.request
-from kfp.components import InputPath, InputTextFile, OutputPath, OutputTextFile
+from kfp.components import InputPath, OutputPath
 
 LOGGER = logging.getLogger(__file__)
 
 LOGGING_FORMAT = "[%(asctime)s] - [%(name)s] - [%(levelname)s] - %(message)s"
+
+client = Minio("10.98.26.56:9000", "minio", "minio123", secure=False)
 
 
 def configure_logging():
@@ -44,8 +46,9 @@ def run(input_path: InputPath(str),
         LOGGER.info(f'Run pdf preprocess on file {input_path} with result dir images - '
                     f'{output_images_path}'
                     f' and result dir text - {output_text_path}')
-        file_name = str(input_path.split('/')[-1])
-        urllib.request.urlretrieve(input_path, file_name)
+        bucket, file_path = input_path.lstrip('minio://').split('/', maxsplit=1)
+        file_name = str(file_path.split('/')[-1])
+        client.fget_object(bucket, file_path, file_name)
         preprocess(Path(file_name), Path(output_images_path), Path(output_text_path))
     else:
         raise ValueError(f"Not supported file format {input_path}, "
