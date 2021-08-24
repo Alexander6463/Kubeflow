@@ -1,0 +1,12 @@
+from python:3.8
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+WORKDIR /first_component
+COPY ./requirements.txt /first_component/requirements.txt
+RUN pip install -r /first_component/requirements.txt
+COPY . /first_component
+
+EXPOSE 8000
+CMD ["/bin/bash"]

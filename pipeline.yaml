@@ -1,0 +1,74 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: my-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.7.0, pipelines.kubeflow.org/pipeline_compilation_time: '2021-08-27T20:47:12.967375',
+    pipelines.kubeflow.org/pipeline_spec: '{"name": "My pipeline"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.7.0}
+spec:
+  entrypoint: my-pipeline
+  templates:
+  - name: get-preprocess-data
+    container:
+      args: [--input-path, 'minio://example/example1.pdf', --output-images-path, /tmp/outputs/Output_1/data,
+        --output-text-path, /tmp/outputs/Output_2/data]
+      command: [python, /preprocess/preprocess_run.py]
+      image: docker.io/drobnov1994/example:latest
+    outputs:
+      artifacts:
+      - {name: get-preprocess-data-Output-1, path: /tmp/outputs/Output_1/data}
+      - {name: get-preprocess-data-Output-2, path: /tmp/outputs/Output_2/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.7.0
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Gets
+          images and text files from the input pdf file.", "implementation": {"container":
+          {"args": ["--input-path", {"inputValue": "Input 1"}, "--output-images-path",
+          {"outputPath": "Output 1"}, "--output-text-path", {"outputPath": "Output
+          2"}], "command": ["python", "/preprocess/preprocess_run.py"], "image": "docker.io/drobnov1994/example:latest"}},
+          "inputs": [{"description": "Input pdf", "name": "Input 1", "type": "Directory"}],
+          "name": "Get preprocess data", "outputs": [{"description": "images", "name":
+          "Output 1", "type": "Directory"}, {"description": "txt", "name": "Output
+          2", "type": "Directory"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "966bc54f44660444527c1aec88c0a1b426d73b1a118124d9df5453907d967712", "url":
+          "preprocess_component/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"Input
+          1": "minio://example/example1.pdf"}'}
+  - name: my-pipeline
+    dag:
+      tasks:
+      - {name: get-preprocess-data, template: get-preprocess-data}
+      - name: second-component
+        template: second-component
+        dependencies: [get-preprocess-data]
+        arguments:
+          artifacts:
+          - {name: get-preprocess-data-Output-1, from: '{{tasks.get-preprocess-data.outputs.artifacts.get-preprocess-data-Output-1}}'}
+          - {name: get-preprocess-data-Output-2, from: '{{tasks.get-preprocess-data.outputs.artifacts.get-preprocess-data-Output-2}}'}
+  - name: second-component
+    container:
+      args: [--input-path-1, /tmp/inputs/Input_1/data, --input-path-2, /tmp/inputs/Input_2/data]
+      command: [python, /second_component/component_runner.py]
+      image: docker.io/drobnov1994/example:v1
+    inputs:
+      artifacts:
+      - {name: get-preprocess-data-Output-1, path: /tmp/inputs/Input_1/data}
+      - {name: get-preprocess-data-Output-2, path: /tmp/inputs/Input_2/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.7.0
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Gets
+          images and text files from the input pdf file.", "implementation": {"container":
+          {"args": ["--input-path-1", {"inputPath": "Input 1"}, "--input-path-2",
+          {"inputPath": "Input 2"}], "command": ["python", "/second_component/component_runner.py"],
+          "image": "docker.io/drobnov1994/example:v1"}}, "inputs": [{"description":
+          "Input pdf", "name": "Input 1", "type": "Directory"}, {"description": "images",
+          "name": "Input 2", "type": "Directory"}], "name": "Second component"}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "6fc970e3fa7737f40906d0f2ca7def3efae99e785ebfaeec25a09a1b391e3e36",
+          "url": "second_component/component.yaml"}', pipelines.kubeflow.org/max_cache_staleness: P0D}
+  arguments:
+    parameters: []
+  serviceAccountName: pipeline-runner

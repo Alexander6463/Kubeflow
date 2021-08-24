@@ -51,3 +51,4 @@ uritemplate==3.0.1
 urllib3==1.26.6
 websocket-client==1.2.0
 wrapt==1.12.1
+minio==7.1.0

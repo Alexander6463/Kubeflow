@@ -1,0 +1,16 @@
+name: Second component
+description: Gets images and text files from the input pdf file.
+
+
+inputs:
+- {name: Input 1, type: Directory, description: 'Input pdf'}
+- {name: Input 2, type: Directory, description: 'images'}
+
+implementation:
+  container:
+    image: docker.io/drobnov1994/example:v1
+    command: [python, /second_component/component_runner.py]
+    args: [
+        --input-path-1, {inputPath: Input 1},
+        --input-path-2, {inputPath: Input 2}
+            ]

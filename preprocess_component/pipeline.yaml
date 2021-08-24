@@ -1,0 +1,81 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: my-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.7.0, pipelines.kubeflow.org/pipeline_compilation_time: '2021-08-26T21:40:38.937206',
+    pipelines.kubeflow.org/pipeline_spec: '{"name": "My pipeline"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.7.0}
+spec:
+  entrypoint: my-pipeline
+  templates:
+  - name: get-preprocess-data
+    container:
+      args: [--input-path, 'minio://example/example1.pdf', --output-images-path, /tmp/outputs/Output_1/data,
+        --output-text-path, /tmp/outputs/Output_2/data]
+      command: [python, /preprocess/preprocess_run.py]
+      image: docker.io/drobnov1994/example:latest
+    outputs:
+      parameters:
+      - name: get-preprocess-data-Output-1
+        valueFrom: {path: /tmp/outputs/Output_1/data}
+      - name: get-preprocess-data-Output-2
+        valueFrom: {path: /tmp/outputs/Output_2/data}
+      artifacts:
+      - {name: get-preprocess-data-Output-1, path: /tmp/outputs/Output_1/data}
+      - {name: get-preprocess-data-Output-2, path: /tmp/outputs/Output_2/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.7.0
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Gets
+          images and text files from the input pdf file.", "implementation": {"container":
+          {"args": ["--input-path", {"inputValue": "Input 1"}, "--output-images-path",
+          {"outputPath": "Output 1"}, "--output-text-path", {"outputPath": "Output
+          2"}], "command": ["python", "/preprocess/preprocess_run.py"], "image": "docker.io/drobnov1994/example:latest"}},
+          "inputs": [{"description": "Input pdf", "name": "Input 1", "type": "Directory"}],
+          "name": "Get preprocess data", "outputs": [{"description": "images", "name":
+          "Output 1", "type": "Directory"}, {"description": "txt", "name": "Output
+          2", "type": "Directory"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "966bc54f44660444527c1aec88c0a1b426d73b1a118124d9df5453907d967712", "url":
+          "preprocess_component/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"Input
+          1": "minio://example/example1.pdf"}'}
+  - name: get-preprocess-data-2
+    container:
+      args: [--input-path-1, '{{inputs.parameters.get-preprocess-data-Output-1}}',
+        --input-path-2, '{{inputs.parameters.get-preprocess-data-Output-2}}']
+      command: [python, /second_component/component_runner.py]
+      image: docker.io/drobnov1994/example:second_component
+    inputs:
+      parameters:
+      - {name: get-preprocess-data-Output-1}
+      - {name: get-preprocess-data-Output-2}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.7.0
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Gets
+          images and text files from the input pdf file.", "implementation": {"container":
+          {"args": ["--input-path-1", {"inputValue": "Input 1"}, "--input-path-2",
+          {"inputValue": "Input 2"}], "command": ["python", "/second_component/component_runner.py"],
+          "image": "docker.io/drobnov1994/example:second_component"}}, "inputs": [{"description":
+          "Input pdf", "name": "Input 1", "type": "Directory"}, {"description": "images",
+          "name": "Input 2", "type": "Directory"}], "name": "Get preprocess data"}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "7bc6686fa798c655e6d11fc723d120768f6daf867cd9f2dc08387c26a2a7e281",
+          "url": "second_component/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"Input
+          1": "{{inputs.parameters.get-preprocess-data-Output-1}}", "Input 2": "{{inputs.parameters.get-preprocess-data-Output-2}}"}'}
+  - name: my-pipeline
+    dag:
+      tasks:
+      - {name: get-preprocess-data, template: get-preprocess-data}
+      - name: get-preprocess-data-2
+        template: get-preprocess-data-2
+        dependencies: [get-preprocess-data]
+        arguments:
+          parameters:
+          - {name: get-preprocess-data-Output-1, value: '{{tasks.get-preprocess-data.outputs.parameters.get-preprocess-data-Output-1}}'}
+          - {name: get-preprocess-data-Output-2, value: '{{tasks.get-preprocess-data.outputs.parameters.get-preprocess-data-Output-2}}'}
+  arguments:
+    parameters: []
+  serviceAccountName: pipeline-runner

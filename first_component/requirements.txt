@@ -1,0 +1,7 @@
+click==7.1.2
+kfp==1.7.0
+kfp-pipeline-spec==0.1.9
+kfp-server-api==1.6.0
+kubernetes==12.0.1
+minio==7.1.0
+
